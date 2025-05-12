@@ -5,13 +5,14 @@ from collections import defaultdict
 import numpy as np
 import matplotlib.pyplot as plt
 import database
+from utils import calculate_pregnancy_weeks
 
 class RecordsWindow(tk.Toplevel):
-    """Window to view, filter, chart and delete kick records."""
+    """Window to view, filter, chart, edit and delete kick records."""
     def __init__(self, parent):
         super().__init__(parent)
         self.title("All Baby Kick Records")
-        self.geometry("850x500")
+        self.geometry("900x520")
         self.resizable(True, True)
 
         # Top filter frame
@@ -26,9 +27,9 @@ class RecordsWindow(tk.Toplevel):
         self.to_date = DateEntry(filter_frame, date_pattern='yyyy-mm-dd')
         self.to_date.grid(row=0, column=3, padx=(0,15))
 
-        ttk.Button(filter_frame, text="Filter",     command=self.load_records).grid(row=0, column=4, padx=(0,5))
-        ttk.Button(filter_frame, text="Show Chart", command=self.show_chart).grid(row=0, column=5, padx=(0,5))
-        ttk.Button(filter_frame, text="Show Heatmap", command=self.show_heatmap).grid(row=0, column=6)
+        ttk.Button(filter_frame, text="Filter",        command=self.load_records).grid(row=0, column=4, padx=(0,5))
+        ttk.Button(filter_frame, text="Show Chart",    command=self.show_chart).grid(row=0, column=5, padx=(0,5))
+        ttk.Button(filter_frame, text="Show Heatmap",  command=self.show_heatmap).grid(row=0, column=6)
 
         # Table
         table_frame = ttk.Frame(self, padding=(10,0,10,10))
@@ -47,27 +48,32 @@ class RecordsWindow(tk.Toplevel):
         vsb.pack(side="right", fill="y")
         self.tree.pack(fill="both", expand=True)
 
-        # Delete button
-        del_frame = ttk.Frame(self, padding=10)
-        del_frame.pack(fill="x")
-        del_frame.columnconfigure(0, weight=1)
-        ttk.Button(del_frame,
+        # Bottom action buttons: Edit & Delete
+        action_frame = ttk.Frame(self, padding=10)
+        action_frame.pack(fill="x")
+        action_frame.columnconfigure((0,1), weight=1)
+
+        ttk.Button(action_frame,
+                   text="✏️ Edit Selected Record",
+                   command=self.edit_selected
+        ).grid(row=0, column=0, sticky="w")
+        ttk.Button(action_frame,
                    text="🗑️ Delete Selected Record",
                    command=self.delete_selected
-        ).grid(row=0, column=0, sticky="e")
+        ).grid(row=0, column=1, sticky="e")
 
         # Initial load: all records
         self._populate_tree(database.get_all_records())
 
     def _populate_tree(self, rows):
-        """Helper to clear & insert."""
+        """Clear existing rows and insert new ones."""
         for iid in self.tree.get_children():
             self.tree.delete(iid)
         for rec in rows:
             self.tree.insert("", "end", values=rec)
 
     def load_records(self):
-        """Load records from DB into the treeview using the date filters."""
+        """Load records into the table based on date filters."""
         start = self.from_date.get()
         end   = self.to_date.get()
         if start and end:
@@ -85,6 +91,15 @@ class RecordsWindow(tk.Toplevel):
         rid = self.tree.item(sel[0])["values"][0]
         database.delete_record(rid)
         self.load_records()
+
+    def edit_selected(self):
+        """Open an edit dialog for the selected record."""
+        sel = self.tree.selection()
+        if not sel:
+            messagebox.showwarning("No selection", "Please select a record to edit.")
+            return
+        vals = self.tree.item(sel[0])["values"]
+        EditRecordWindow(self, vals, on_save=self.load_records)
 
     def show_chart(self):
         """Bar chart: total kicks per day."""
@@ -127,9 +142,9 @@ class RecordsWindow(tk.Toplevel):
             data[date][hour] += cnt
 
         dates = sorted(data)
-        mat   = np.array([data[d] for d in dates]).T  # (24, n_dates)
+        mat   = np.array([data[d] for d in dates]).T  # shape (24, n_dates)
 
-        # color scale from 0 to max
+        # color scale from zero up to the max value
         vmin, vmax = 0, int(mat.max()) if mat.size else 1
 
         plt.figure(figsize=(10,5))
@@ -143,3 +158,74 @@ class RecordsWindow(tk.Toplevel):
         plt.title("Baby Kicks Heatmap")
         plt.tight_layout()
         plt.show()
+
+class EditRecordWindow(tk.Toplevel):
+    """Modal window to edit an existing record."""
+    def __init__(self, parent, record_values, on_save):
+        super().__init__(parent)
+        self.title("Edit Record")
+        self.resizable(False, False)
+        self.on_save = on_save
+        self.record_id = record_values[0]
+
+        # Unpack existing values
+        _, date, time, kicks, comment, _, _ = record_values
+
+        frm = ttk.Frame(self, padding=20)
+        frm.grid()
+
+        # Date
+        ttk.Label(frm, text="Date*:").grid(row=0, column=0, sticky="e", padx=5, pady=5)
+        self.dt = DateEntry(frm, date_pattern='yyyy-mm-dd')
+        self.dt.set_date(date)
+        self.dt.grid(row=0, column=1, pady=5)
+
+        # Time
+        ttk.Label(frm, text="Time (HH:MM)*:").grid(row=1, column=0, sticky="e", padx=5, pady=5)
+        self.tm = ttk.Entry(frm)
+        self.tm.insert(0, time)
+        self.tm.grid(row=1, column=1, pady=5)
+
+        # Kicks
+        ttk.Label(frm, text="Kicks Count:").grid(row=2, column=0, sticky="e", padx=5, pady=5)
+        self.kc = ttk.Entry(frm)
+        self.kc.insert(0, kicks)
+        self.kc.grid(row=2, column=1, pady=5)
+
+        # Comment
+        ttk.Label(frm, text="Comment:").grid(row=3, column=0, sticky="ne", padx=5, pady=5)
+        self.cm = tk.Text(frm, width=30, height=4, wrap="word")
+        self.cm.insert("1.0", comment)
+        self.cm.grid(row=3, column=1, pady=5)
+
+        # Save / Cancel buttons
+        btns = ttk.Frame(frm)
+        btns.grid(row=4, column=0, columnspan=2, pady=(10,0))
+        ttk.Button(btns, text="Save",   command=self.save).grid(row=0, column=0, padx=5)
+        ttk.Button(btns, text="Cancel", command=self.destroy).grid(row=0, column=1, padx=5)
+
+    def save(self):
+        """Validate and commit edits."""
+        new_date = self.dt.get()
+        new_time = self.tm.get().strip()
+        new_kicks = self.kc.get().strip()
+        new_comment = self.cm.get("1.0", tk.END).strip()
+
+        if not new_date or not new_time:
+            messagebox.showwarning("Missing data", "Date and Time are required.")
+            return
+
+        # Compute updated pregnancy weeks
+        new_weeks = calculate_pregnancy_weeks(new_date)
+
+        # Commit to DB
+        database.update_record(
+            self.record_id,
+            new_date, new_time,
+            new_kicks, new_comment,
+            new_weeks
+        )
+
+        messagebox.showinfo("Success", "Record updated.")
+        self.on_save()
+        self.destroy()
