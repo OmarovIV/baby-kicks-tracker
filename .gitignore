@@ -1,14 +1,14 @@
 # Virtual environment
 venv/
 
-# Python cache
+# Python bytecode
 __pycache__/
 *.pyc
 
-# Database file
-baby_kicks.db
+# Database files
+*.db
 
-# VSCode
+# VSCode settings
 .vscode/
 
 # macOS
