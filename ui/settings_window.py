@@ -28,9 +28,11 @@ class SettingsWindow(tk.Toplevel):
             row=1, column=0, columnspan=2, pady=10
         )
 
-        self.update(); self.minsize(self.winfo_width(), self.winfo_height())
+        self.update()
+        self.minsize(self.winfo_width(), self.winfo_height())
 
     def save(self):
+        """Save new pregnancy start date."""
         set_pregnancy_start_date(self.date_entry.get())
         ttk.Label(self, text="Saved!", foreground="green").grid(
             row=2, column=0, columnspan=2, pady=(0,10)
