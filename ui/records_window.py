@@ -14,6 +14,7 @@ class RecordsWindow(tk.Toplevel):
         self.title("All Baby Kick Records")
         self.geometry("900x520")
         self.resizable(True, True)
+        self.parent = parent
 
         # Top filter frame
         filter_frame = ttk.Frame(self, padding=10)
@@ -159,12 +160,14 @@ class RecordsWindow(tk.Toplevel):
         plt.tight_layout()
         plt.show()
 
+
 class EditRecordWindow(tk.Toplevel):
     """Modal window to edit an existing record."""
     def __init__(self, parent, record_values, on_save):
         super().__init__(parent)
         self.title("Edit Record")
         self.resizable(False, False)
+        self.parent_window = parent
         self.on_save = on_save
         self.record_id = record_values[0]
 
@@ -205,26 +208,34 @@ class EditRecordWindow(tk.Toplevel):
         ttk.Button(btns, text="Cancel", command=self.destroy).grid(row=0, column=1, padx=5)
 
     def save(self):
-        """Validate and commit edits."""
-        new_date = self.dt.get()
-        new_time = self.tm.get().strip()
-        new_kicks = self.kc.get().strip()
+        """Validate inputs, update DB, reset filters, and refresh."""
+        new_date    = self.dt.get()
+        new_time    = self.tm.get().strip()
+        new_kicks   = self.kc.get().strip()
         new_comment = self.cm.get("1.0", tk.END).strip()
 
         if not new_date or not new_time:
             messagebox.showwarning("Missing data", "Date and Time are required.")
             return
 
-        # Compute updated pregnancy weeks
+        # compute updated pregnancy weeks
         new_weeks = calculate_pregnancy_weeks(new_date)
 
-        # Commit to DB
+        # commit to DB
         database.update_record(
             self.record_id,
             new_date, new_time,
             new_kicks, new_comment,
             new_weeks
         )
+
+        # reset filters in parent window to full range
+        all_rows = database.get_all_records()
+        if all_rows:
+            dates = [row[1] for row in all_rows]  # row[1] is the date
+            min_date, max_date = min(dates), max(dates)
+            self.parent_window.from_date.set_date(min_date)
+            self.parent_window.to_date.set_date(max_date)
 
         messagebox.showinfo("Success", "Record updated.")
         self.on_save()
