@@ -27,9 +27,9 @@ class RecordsWindow(tk.Toplevel):
         self.to_date = DateEntry(filter_frame, date_pattern='yyyy-mm-dd')
         self.to_date.grid(row=0, column=3, padx=(0, 15))
 
-        ttk.Button(filter_frame, text="Filter",   command=self.load_records).grid(row=0, column=4, padx=(0,5))
-        ttk.Button(filter_frame, text="Show Chart",  command=self.show_chart).grid(row=0, column=5, padx=(0,5))
-        ttk.Button(filter_frame, text="Show Heatmap",command=self.show_heatmap).grid(row=0, column=6)
+        ttk.Button(filter_frame, text="Filter",       command=self.load_records).grid(row=0, column=4, padx=(0,5))
+        ttk.Button(filter_frame, text="Show Chart",   command=self.show_chart).grid(row=0, column=5, padx=(0,5))
+        ttk.Button(filter_frame, text="Show Heatmap", command=self.show_heatmap).grid(row=0, column=6)
 
         # Table
         table_frame = ttk.Frame(self, padding=(10,0,10,10))
@@ -56,23 +56,25 @@ class RecordsWindow(tk.Toplevel):
                    command=self.delete_selected
         ).grid(row=0, column=0, sticky="e")
 
-        # Initial load: **all** records
-        self.load_records()
+        # Initial load: all records (ignore default DateEntry values)
+        self._populate_tree(database.get_all_records())
 
-    def load_records(self):
-        """Load records from DB into the treeview."""
+    def _populate_tree(self, rows):
+        """Helper to clear & insert."""
         for row in self.tree.get_children():
             self.tree.delete(row)
+        for rec in rows:
+            self.tree.insert("", "end", values=rec)
 
+    def load_records(self):
+        """Load records from DB into the treeview using the date filters."""
         start = self.from_date.get()
         end   = self.to_date.get()
         if start and end:
             rows = database.get_records_between_dates(start, end)
         else:
             rows = database.get_all_records()
-
-        for rec in rows:
-            self.tree.insert("", "end", values=rec)
+        self._populate_tree(rows)
 
     def delete_selected(self):
         """Delete highlighted record and refresh."""
@@ -82,6 +84,7 @@ class RecordsWindow(tk.Toplevel):
             return
         rid = self.tree.item(sel[0])["values"][0]
         database.delete_record(rid)
+        # после удаления снова показываем все или в рамках фильтра
         self.load_records()
 
     def show_chart(self):
@@ -96,8 +99,8 @@ class RecordsWindow(tk.Toplevel):
             cnt = int(kicks) if kicks.isdigit() else 1
             daily[date] += cnt
 
-        dates = sorted(daily)
-        counts= [daily[d] for d in dates]
+        dates  = sorted(daily)
+        counts = [daily[d] for d in dates]
         plt.figure(figsize=(10,5))
         plt.bar(dates, counts)
         plt.xlabel("Date")
@@ -123,7 +126,6 @@ class RecordsWindow(tk.Toplevel):
         dates = sorted(data)
         mat   = np.array([data[d] for d in dates]).T  # (24, n_dates)
         plt.figure(figsize=(10,5))
-        # start day at top
         plt.imshow(mat, aspect='auto', origin='upper', cmap='YlOrRd')
         plt.colorbar(label="Number of Kicks")
         plt.yticks(range(24), [f"{h:02d}:00" for h in range(24)])
