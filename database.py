@@ -11,10 +11,8 @@ def create_table():
     Ensure the main table exists, and add missing columns if needed.
     """
     conn = get_connection()
-    cursor = conn.cursor()
-
-    # create base table if not exists
-    cursor.execute("""
+    cur = conn.cursor()
+    cur.execute("""
     CREATE TABLE IF NOT EXISTS kicks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         date TEXT NOT NULL,
@@ -23,18 +21,15 @@ def create_table():
         comment TEXT
     )
     """)
+    # fetch existing columns
+    cur.execute("PRAGMA table_info(kicks)")
+    existing = {r[1] for r in cur.fetchall()}
 
-    # get existing columns
-    cursor.execute("PRAGMA table_info(kicks)")
-    existing = {row[1] for row in cursor.fetchall()}
-
-    # add pregnancy_weeks column if missing
+    # add missing columns
     if "pregnancy_weeks" not in existing:
-        cursor.execute("ALTER TABLE kicks ADD COLUMN pregnancy_weeks TEXT")
-
-    # add added_at column if missing
+        cur.execute("ALTER TABLE kicks ADD COLUMN pregnancy_weeks TEXT")
     if "added_at" not in existing:
-        cursor.execute("ALTER TABLE kicks ADD COLUMN added_at TEXT")
+        cur.execute("ALTER TABLE kicks ADD COLUMN added_at TEXT")
 
     conn.commit()
     conn.close()
@@ -49,10 +44,10 @@ def insert_record(date, time, kicks, comment, pregnancy_weeks, added_at=None):
         added_at = datetime.now().isoformat(timespec='seconds')
 
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
+    cur = conn.cursor()
+    cur.execute("""
     INSERT INTO kicks
-      (date, time, kicks, comment, pregnancy_weeks, added_at)
+        (date, time, kicks, comment, pregnancy_weeks, added_at)
     VALUES (?, ?, ?, ?, ?, ?)
     """, (date, time, kicks, comment, pregnancy_weeks, added_at))
     conn.commit()
@@ -63,9 +58,9 @@ def record_exists(date, time):
     Check if a record for given date+time already exists.
     """
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT 1 FROM kicks WHERE date = ? AND time = ? LIMIT 1", (date, time))
-    exists = cursor.fetchone() is not None
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM kicks WHERE date = ? AND time = ? LIMIT 1", (date, time))
+    exists = cur.fetchone() is not None
     conn.close()
     return exists
 
@@ -74,13 +69,13 @@ def get_all_records():
     Return all records ordered by date/time desc.
     """
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
+    cur = conn.cursor()
+    cur.execute("""
     SELECT id, date, time, kicks, comment, pregnancy_weeks, added_at
-      FROM kicks
-     ORDER BY date DESC, time DESC
+    FROM kicks
+    ORDER BY date DESC, time DESC
     """)
-    rows = cursor.fetchall()
+    rows = cur.fetchall()
     conn.close()
     return rows
 
@@ -89,23 +84,29 @@ def get_records_between_dates(start_date, end_date):
     Return records where date is between start_date and end_date inclusive.
     """
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
+    cur = conn.cursor()
+    cur.execute("""
     SELECT id, date, time, kicks, comment, pregnancy_weeks, added_at
-      FROM kicks
-     WHERE date BETWEEN ? AND ?
-  ORDER BY date ASC, time ASC
+    FROM kicks
+    WHERE date BETWEEN ? AND ?
+    ORDER BY date ASC, time ASC
     """, (start_date, end_date))
-    rows = cursor.fetchall()
+    rows = cur.fetchall()
     conn.close()
     return rows
+
+def get_records_by_date(date):
+    """
+    Alias for retrieving all records on a single date.
+    """
+    return get_records_between_dates(date, date)
 
 def delete_record(record_id):
     """
     Delete record by its primary key.
     """
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM kicks WHERE id = ?", (record_id,))
+    cur = conn.cursor()
+    cur.execute("DELETE FROM kicks WHERE id = ?", (record_id,))
     conn.commit()
     conn.close()

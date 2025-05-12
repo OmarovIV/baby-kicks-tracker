@@ -16,7 +16,8 @@ class AlertsWindow(tk.Toplevel):
         frame = ttk.Frame(self, padding=20)
         frame.grid(row=0, column=0, sticky="nsew")
 
-        ttk.Label(frame, text="Anomaly Detection",
+        ttk.Label(frame,
+                  text="Anomaly Detection",
                   font=("Segoe UI", 14, "bold")
         ).grid(row=0, column=0, pady=(0,10))
 

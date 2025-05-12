@@ -27,45 +27,36 @@ class RecordsWindow(tk.Toplevel):
         self.to_date = DateEntry(filter_frame, date_pattern='yyyy-mm-dd')
         self.to_date.grid(row=0, column=3, padx=(0, 15))
 
-        filter_btn = ttk.Button(filter_frame, text="Filter", command=self.load_records)
-        filter_btn.grid(row=0, column=4, padx=(0, 5))
-        chart_btn = ttk.Button(filter_frame, text="Show Chart", command=self.show_chart)
-        chart_btn.grid(row=0, column=5, padx=(0, 5))
-        heatmap_btn = ttk.Button(filter_frame, text="Show Heatmap", command=self.show_heatmap)
-        heatmap_btn.grid(row=0, column=6)
+        ttk.Button(filter_frame, text="Filter",   command=self.load_records).grid(row=0, column=4, padx=(0,5))
+        ttk.Button(filter_frame, text="Show Chart",  command=self.show_chart).grid(row=0, column=5, padx=(0,5))
+        ttk.Button(filter_frame, text="Show Heatmap",command=self.show_heatmap).grid(row=0, column=6)
 
-        # Table frame
+        # Table
         table_frame = ttk.Frame(self, padding=(10,0,10,10))
         table_frame.pack(fill="both", expand=True)
-
-        columns = ("ID", "Date", "Time", "Kicks", "Comment", "Weeks", "Added At")
-        self.tree = ttk.Treeview(
-            table_frame, columns=columns, show="headings"
-        )
-        for col in columns:
-            self.tree.heading(col, text=col)
-        widths = [40, 100, 80, 60, 300, 100, 140]
-        for col, w in zip(columns, widths):
-            self.tree.column(col, width=w, anchor="center")
+        cols = ("ID","Date","Time","Kicks","Comment","Weeks","Added At")
+        self.tree = ttk.Treeview(table_frame, columns=cols, show="headings")
+        for c in cols:
+            self.tree.heading(c, text=c)
+        widths = [40,100,80,60,300,100,140]
+        for c,w in zip(cols,widths):
+            self.tree.column(c, width=w, anchor="center")
 
         vsb = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=vsb.set)
         vsb.pack(side="right", fill="y")
         self.tree.pack(fill="both", expand=True)
 
-        # Bottom delete button
+        # Delete button
         del_frame = ttk.Frame(self, padding=10)
         del_frame.pack(fill="x")
         del_frame.columnconfigure(0, weight=1)
-        del_btn = ttk.Button(
-            del_frame, text="🗑️ Delete Selected Record", command=self.delete_selected
-        )
-        del_btn.grid(row=0, column=0, sticky="e")
+        ttk.Button(del_frame,
+                   text="🗑️ Delete Selected Record",
+                   command=self.delete_selected
+        ).grid(row=0, column=0, sticky="e")
 
-        # Initial load
-        today = datetime.today().strftime("%Y-%m-%d")
-        self.from_date.set_date(today)
-        self.to_date.set_date(today)
+        # Initial load: **all** records
         self.load_records()
 
     def load_records(self):
@@ -74,8 +65,12 @@ class RecordsWindow(tk.Toplevel):
             self.tree.delete(row)
 
         start = self.from_date.get()
-        end = self.to_date.get()
-        rows = database.get_records_between_dates(start, end)
+        end   = self.to_date.get()
+        if start and end:
+            rows = database.get_records_between_dates(start, end)
+        else:
+            rows = database.get_all_records()
+
         for rec in rows:
             self.tree.insert("", "end", values=rec)
 
@@ -91,23 +86,19 @@ class RecordsWindow(tk.Toplevel):
 
     def show_chart(self):
         """Bar chart: total kicks per day."""
-        rows = database.get_records_between_dates(
-            self.from_date.get(), self.to_date.get()
-        )
+        rows = database.get_records_between_dates(self.from_date.get(), self.to_date.get())
         if not rows:
             messagebox.showinfo("No Data", "No records in that range.")
             return
 
-        # aggregate daily total kicks
         daily = defaultdict(int)
         for _, date, _, kicks, *_ in rows:
-            count = int(kicks) if kicks.isdigit() else 1
-            daily[date] += count
+            cnt = int(kicks) if kicks.isdigit() else 1
+            daily[date] += cnt
 
         dates = sorted(daily)
-        counts = [daily[d] for d in dates]
-
-        plt.figure(figsize=(10, 5))
+        counts= [daily[d] for d in dates]
+        plt.figure(figsize=(10,5))
         plt.bar(dates, counts)
         plt.xlabel("Date")
         plt.ylabel("Number of Kicks")
@@ -118,27 +109,24 @@ class RecordsWindow(tk.Toplevel):
 
     def show_heatmap(self):
         """Heatmap: kicks by hour-of-day vs date."""
-        rows = database.get_records_between_dates(
-            self.from_date.get(), self.to_date.get()
-        )
+        rows = database.get_records_between_dates(self.from_date.get(), self.to_date.get())
         if not rows:
             messagebox.showinfo("No Data", "No records in that range.")
             return
 
-        # prepare data matrix
         data = defaultdict(lambda: [0]*24)
         for _, date, time_str, kicks, *_ in rows:
             hour = int(time_str.split(":")[0])
-            count = int(kicks) if kicks.isdigit() else 1
-            data[date][hour] += count
+            cnt  = int(kicks) if kicks.isdigit() else 1
+            data[date][hour] += cnt
 
         dates = sorted(data)
-        mat = np.array([data[d] for d in dates]).T  # shape (24, n_dates)
-
-        plt.figure(figsize=(10, 5))
-        plt.imshow(mat, aspect='auto', origin='lower', cmap='YlOrRd')
+        mat   = np.array([data[d] for d in dates]).T  # (24, n_dates)
+        plt.figure(figsize=(10,5))
+        # start day at top
+        plt.imshow(mat, aspect='auto', origin='upper', cmap='YlOrRd')
         plt.colorbar(label="Number of Kicks")
-        plt.yticks(range(0,24), [f"{h:02d}:00" for h in range(24)])
+        plt.yticks(range(24), [f"{h:02d}:00" for h in range(24)])
         plt.xticks(range(len(dates)), dates, rotation=45)
         plt.xlabel("Date")
         plt.ylabel("Hour of Day")
