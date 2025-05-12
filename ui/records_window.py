@@ -1,10 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from datetime import datetime
 from tkcalendar import DateEntry
+from collections import defaultdict
 import numpy as np
 import matplotlib.pyplot as plt
-from collections import defaultdict
 import database
 
 class RecordsWindow(tk.Toplevel):
@@ -19,27 +18,28 @@ class RecordsWindow(tk.Toplevel):
         filter_frame = ttk.Frame(self, padding=10)
         filter_frame.pack(fill="x")
 
-        ttk.Label(filter_frame, text="From:").grid(row=0, column=0, padx=(0, 5))
+        ttk.Label(filter_frame, text="From:").grid(row=0, column=0, padx=(0,5))
         self.from_date = DateEntry(filter_frame, date_pattern='yyyy-mm-dd')
-        self.from_date.grid(row=0, column=1, padx=(0, 15))
+        self.from_date.grid(row=0, column=1, padx=(0,15))
 
-        ttk.Label(filter_frame, text="To:").grid(row=0, column=2, padx=(0, 5))
+        ttk.Label(filter_frame, text="To:").grid(row=0, column=2, padx=(0,5))
         self.to_date = DateEntry(filter_frame, date_pattern='yyyy-mm-dd')
-        self.to_date.grid(row=0, column=3, padx=(0, 15))
+        self.to_date.grid(row=0, column=3, padx=(0,15))
 
-        ttk.Button(filter_frame, text="Filter",       command=self.load_records).grid(row=0, column=4, padx=(0,5))
-        ttk.Button(filter_frame, text="Show Chart",   command=self.show_chart).grid(row=0, column=5, padx=(0,5))
+        ttk.Button(filter_frame, text="Filter",     command=self.load_records).grid(row=0, column=4, padx=(0,5))
+        ttk.Button(filter_frame, text="Show Chart", command=self.show_chart).grid(row=0, column=5, padx=(0,5))
         ttk.Button(filter_frame, text="Show Heatmap", command=self.show_heatmap).grid(row=0, column=6)
 
         # Table
         table_frame = ttk.Frame(self, padding=(10,0,10,10))
         table_frame.pack(fill="both", expand=True)
+
         cols = ("ID","Date","Time","Kicks","Comment","Weeks","Added At")
         self.tree = ttk.Treeview(table_frame, columns=cols, show="headings")
         for c in cols:
             self.tree.heading(c, text=c)
         widths = [40,100,80,60,300,100,140]
-        for c,w in zip(cols,widths):
+        for c,w in zip(cols, widths):
             self.tree.column(c, width=w, anchor="center")
 
         vsb = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
@@ -61,8 +61,8 @@ class RecordsWindow(tk.Toplevel):
 
     def _populate_tree(self, rows):
         """Helper to clear & insert."""
-        for row in self.tree.get_children():
-            self.tree.delete(row)
+        for iid in self.tree.get_children():
+            self.tree.delete(iid)
         for rec in rows:
             self.tree.insert("", "end", values=rec)
 
@@ -88,23 +88,20 @@ class RecordsWindow(tk.Toplevel):
 
     def show_chart(self):
         """Bar chart: total kicks per day."""
-        # we re-query DB to ensure up-to-date counts
-        start = self.from_date.get()
-        end   = self.to_date.get()
-        rows = (database.get_records_between_dates(start, end)
-                if start and end else
-                database.get_all_records())
-        if not rows:
-            messagebox.showinfo("No Data", "No records in that range.")
+        items = self.tree.get_children()
+        if not items:
+            messagebox.showinfo("No Data", "No records to display.")
             return
 
         daily = defaultdict(int)
-        for _, date, _, kicks, *_ in rows:
-            cnt = int(kicks) if kicks.isdigit() else 1
+        for iid in items:
+            _, date, _, kicks, *_ = self.tree.item(iid)["values"]
+            cnt = int(kicks) if str(kicks).isdigit() else 1
             daily[date] += cnt
 
         dates  = sorted(daily)
         counts = [daily[d] for d in dates]
+
         plt.figure(figsize=(10,5))
         plt.bar(dates, counts)
         plt.xlabel("Date")
@@ -116,7 +113,6 @@ class RecordsWindow(tk.Toplevel):
 
     def show_heatmap(self):
         """Heatmap: kicks by hour-of-day vs date, using current table contents."""
-        # read displayed rows from treeview
         items = self.tree.get_children()
         if not items:
             messagebox.showinfo("No Data", "No records to display.")
@@ -125,17 +121,21 @@ class RecordsWindow(tk.Toplevel):
         # aggregate kicks per date/hour
         data = defaultdict(lambda: [0]*24)
         for iid in items:
-            vals = self.tree.item(iid)["values"]
-            date, time_str, kicks = vals[1], vals[2], vals[3]
+            _, date, time_str, kicks, *_ = self.tree.item(iid)["values"]
             hour = int(time_str.split(":")[0])
-            cnt  = int(kicks) if isinstance(kicks, str) and kicks.isdigit() else 1
+            cnt  = int(kicks) if str(kicks).isdigit() else 1
             data[date][hour] += cnt
 
         dates = sorted(data)
-        mat   = np.array([data[d] for d in dates]).T  # shape (24, n_dates)
+        mat   = np.array([data[d] for d in dates]).T  # (24, n_dates)
+
+        # color scale from 0 to max
+        vmin, vmax = 0, int(mat.max()) if mat.size else 1
+
         plt.figure(figsize=(10,5))
-        plt.imshow(mat, aspect='auto', origin='upper', cmap='YlOrRd')
-        plt.colorbar(label="Number of Kicks")
+        im = plt.imshow(mat, aspect='auto', origin='upper',
+                        cmap='YlOrRd', vmin=vmin, vmax=vmax)
+        plt.colorbar(im, label="Number of Kicks")
         plt.yticks(range(24), [f"{h:02d}:00" for h in range(24)])
         plt.xticks(range(len(dates)), dates, rotation=45)
         plt.xlabel("Date")
