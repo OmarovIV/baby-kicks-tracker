@@ -22,7 +22,7 @@ class AlertsWindow(tk.Toplevel):
         ).grid(row=0, column=0, pady=(0,10))
 
         today = datetime.today().strftime("%Y-%m-%d")
-        records = database.get_records_by_date(today)
+        records = database.get_records_between_dates(today, today)
 
         if not records:
             msg, color = "⚠️ No records today!\nPlease check baby activity.", "red"

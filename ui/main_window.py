@@ -73,10 +73,13 @@ class MainWindow(tk.Tk):
         self.comment_entry = tk.Text(container, height=4, font=default_font, wrap="word")
         self.comment_entry.grid(row=5, column=1, sticky="we", pady=(10, 0))
 
-        # Enable paste via Ctrl+V (Win/Linux) and Cmd+V (macOS)
-        self.comment_entry.bind("<Control-v>",  lambda e: self.comment_entry.event_generate("<<Paste>>"))
-        self.comment_entry.bind("<Control-V>",  lambda e: self.comment_entry.event_generate("<<Paste>>"))
-        self.comment_entry.bind("<Command-v>",  lambda e: self.comment_entry.event_generate("<<Paste>>"))
+        # Enable paste via Ctrl+V/Cmd+V, but swallow the original event to avoid double-paste
+        def _on_paste(event):
+            event.widget.event_generate("<<Paste>>")
+            return "break"
+
+        for seq in ("<Control-v>", "<Control-V>", "<Command-v>"):
+            self.comment_entry.bind(seq, _on_paste)
 
         # Buttons
         btn_frame = ttk.Frame(container)
