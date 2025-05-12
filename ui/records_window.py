@@ -56,7 +56,7 @@ class RecordsWindow(tk.Toplevel):
                    command=self.delete_selected
         ).grid(row=0, column=0, sticky="e")
 
-        # Initial load: all records (ignore default DateEntry values)
+        # Initial load: all records
         self._populate_tree(database.get_all_records())
 
     def _populate_tree(self, rows):
@@ -84,12 +84,16 @@ class RecordsWindow(tk.Toplevel):
             return
         rid = self.tree.item(sel[0])["values"][0]
         database.delete_record(rid)
-        # после удаления снова показываем все или в рамках фильтра
         self.load_records()
 
     def show_chart(self):
         """Bar chart: total kicks per day."""
-        rows = database.get_records_between_dates(self.from_date.get(), self.to_date.get())
+        # we re-query DB to ensure up-to-date counts
+        start = self.from_date.get()
+        end   = self.to_date.get()
+        rows = (database.get_records_between_dates(start, end)
+                if start and end else
+                database.get_all_records())
         if not rows:
             messagebox.showinfo("No Data", "No records in that range.")
             return
@@ -111,20 +115,24 @@ class RecordsWindow(tk.Toplevel):
         plt.show()
 
     def show_heatmap(self):
-        """Heatmap: kicks by hour-of-day vs date."""
-        rows = database.get_records_between_dates(self.from_date.get(), self.to_date.get())
-        if not rows:
-            messagebox.showinfo("No Data", "No records in that range.")
+        """Heatmap: kicks by hour-of-day vs date, using current table contents."""
+        # read displayed rows from treeview
+        items = self.tree.get_children()
+        if not items:
+            messagebox.showinfo("No Data", "No records to display.")
             return
 
+        # aggregate kicks per date/hour
         data = defaultdict(lambda: [0]*24)
-        for _, date, time_str, kicks, *_ in rows:
+        for iid in items:
+            vals = self.tree.item(iid)["values"]
+            date, time_str, kicks = vals[1], vals[2], vals[3]
             hour = int(time_str.split(":")[0])
-            cnt  = int(kicks) if kicks.isdigit() else 1
+            cnt  = int(kicks) if isinstance(kicks, str) and kicks.isdigit() else 1
             data[date][hour] += cnt
 
         dates = sorted(data)
-        mat   = np.array([data[d] for d in dates]).T  # (24, n_dates)
+        mat   = np.array([data[d] for d in dates]).T  # shape (24, n_dates)
         plt.figure(figsize=(10,5))
         plt.imshow(mat, aspect='auto', origin='upper', cmap='YlOrRd')
         plt.colorbar(label="Number of Kicks")
