@@ -1,83 +1,52 @@
-# 👩‍🍼 Baby Kicks Tracker — Setup on macOS
+# 🧰 Mac User Setup — Baby Kicks Tracker
 
-This guide helps you run the app on macOS without being a developer.
-
-## ✅ Requirements
-
-- macOS with internet access
-- Python 3.11+ installed (https://www.python.org/downloads/mac-osx/)
+This guide helps you run the Baby Kicks Tracker on macOS.
 
 ---
 
-## 🔧 Step-by-Step Installation
+## 1. Requirements
 
-### 1. Download the App
+- Python 3 installed (pre-installed on macOS)
+- Recommended: Homebrew + virtualenv
 
-- Get the zipped project folder from your partner or GitHub.
-- Unzip it to your Desktop or Documents.
+---
 
-### 2. Open Terminal
+## 2. Setup
 
-- Use Spotlight (Cmd + Space) → search for **Terminal** and open it.
-
-### 3. Navigate to the project folder
+### Option A: Quick start without virtualenv
 
 ```bash
-cd ~/Desktop/baby-kicks-tracker   # Or wherever you unzipped it
-```
-
-### 4. Create a virtual environment
-
-```bash
-python3 -m venv venv
-```
-
-### 5. Activate the environment
-
-```bash
-source venv/bin/activate
-```
-
-You should see `(venv)` at the beginning of your Terminal prompt.
-
-### 6. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 7. Run the App 🎉
-
-```bash
+cd path/to/project
+pip3 install -r requirements.txt
 python3 main.py
 ```
 
----
-
-## 📲 (Optional) Create a Mac App (.app)
+### Option B: Using virtualenv (recommended)
 
 ```bash
-pip install pyinstaller
-pyinstaller --onefile --windowed --name "BabyKicks" main.py
+cd path/to/project
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python main.py
 ```
 
-- After a few seconds, you’ll find `dist/BabyKicks.app`
-- Move it to `Applications/` or Desktop, and launch by double-clicking
-
 ---
 
-## ❗ Common Issues
+## 3. 🚀 Run without Terminal (recommended)
 
-- "Permission denied": use `chmod +x` on script or `.app`
-- "Python not found": try `python3` instead of `python`
-- App won't launch: check security settings under System Preferences → Security → Allow from Anywhere
+You can run the app by double-clicking a script:
 
----
+### ✅ Steps:
 
-## 🙋 Need Help?
+1. Double-click the `run.command` file in the project folder.
+2. If macOS prompts security warnings, click **Open**.
+3. The app will launch.
 
-Ask your partner or open an issue on GitHub.
+If the script doesn’t run:
+```bash
+chmod +x run.command
+```
 
----
+That’s it 🎉
 
-Enjoy using Baby Kicks Tracker! ❤️
