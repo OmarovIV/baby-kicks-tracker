@@ -1,68 +1,61 @@
-# Baby Kicks Tracker
+# 🍼 Baby Kicks Tracker
 
-Simple desktop app to log and visualize your baby’s kicks.
+Desktop app for tracking and visualizing baby movements during pregnancy.
+Built with Python, Tkinter, and Matplotlib.
 
-## Features
+---
 
-- Add kick records with date, time, count and comment
-- Automatic calculation of pregnancy weeks
-- View, filter and delete records
-- Daily overview chart & hourly heatmap
-- Anomaly alerts if no kicks today
-- Cross-platform (Windows, macOS, Linux)
+## 🚀 Features
 
-## Prerequisites
+- Add kicks with date, time, optional count and comment
+- Auto-calculate pregnancy week & day
+- View all records with filtering and editing
+- Heatmap and bar chart visualizations
+- Simple anomaly alerts
+- Export to standalone EXE or APP for distribution
 
-- **Python 3.8+**
-- **pip**
+---
 
-On **macOS** you may need to install and link `tkinter`:
+## 📦 Installation & Running (for Developers)
 
-```bash
-brew install tcl-tk
-# then when installing Python, point it at Homebrew’s tcl-tk, e.g.:
-# export LDFLAGS="-L/usr/local/opt/tcl-tk/lib"
-# export CPPFLAGS="-I/usr/local/opt/tcl-tk/include"
-# pyenv install 3.x.x
-```
-
-## Installation
+### 🖥 Windows / macOS
 
 ```bash
-git clone <your-repo-url>
-cd baby_kicks_app
+# 1. Clone project
+$ git clone https://github.com/yourusername/baby-kicks-tracker.git
+$ cd baby-kicks-tracker
 
-### Create virtual env
+# 2. Create & activate virtualenv
+$ python -m venv venv
+$ source venv/bin/activate     # macOS/Linux
+$ .\venv\Scripts\Activate.ps1 # Windows PowerShell
 
-python3 -m venv venv
-source venv/bin/activate # on Windows: venv\Scripts\activate
+# 3. Install dependencies
+$ pip install -r requirements.txt
 
-### Install dependencies
-
-pip install --upgrade pip
-pip install -r requirements.txt
-
-### Run
-
-python main.py
+# 4. Run the app
+$ python main.py
 ```
 
-## Packaging
+---
 
-### Standalone executable (Windows/macOS/Linux)
+## 📁 Documentation
 
-Using PyInstaller:
+- [👩‍🍼 For End Users (macOS Setup)](docs/MAC_USER_SETUP.md)
+- [📦 Packaging & PyInstaller Guide](docs/PACKAGING.md)
 
-```bash
-pip install pyinstaller
-pyinstaller --onefile --windowed main.py
-```
+---
 
-The app bundle will appear in dist/.
+## ✅ Coming Soon
 
-## Usage
+- Export to CSV
+- Weekly/Monthly reports
+- Dark mode toggle
+- Automatic backups
+- Mobile companion app
 
-- Add Record: enter Date, Time, optional Kicks count & Comment
-- View Records: filter by date, delete, show chart or heatmap
-- Settings: adjust pregnancy start date
-- Alerts: see if today’s activity is missing
+---
+
+## 🛠 Maintainer
+
+Built with ❤️ by [@igor-omarov](https://github.com/igor-omarov)
