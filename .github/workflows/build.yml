@@ -1,15 +1,15 @@
 name: Build EXE
 
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    types: [published]
 
 jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -31,10 +31,3 @@ jobs:
         with:
           name: BabyKicksTracker.exe
           path: dist/BabyKicksTracker.exe
-
-      - name: Release to GitHub
-        uses: softprops/action-gh-release@v1
-        with:
-          files: dist/BabyKicksTracker.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
